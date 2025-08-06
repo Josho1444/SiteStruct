@@ -78,12 +78,31 @@ export async function scrapeWebsite(
                        $('meta[property="og:description"]').attr('content') || 
                        '';
 
-    // Extract main content
+    // Extract main content - focus on useful support content only
     let content = '';
     
     if (extractMainContent) {
-      // Try to find main content areas
+      // Remove navigation, sidebar, footer, and other irrelevant elements first
+      $('nav, .nav, .navbar, .navigation').remove();
+      $('aside, .sidebar, .aside, .side-nav').remove();
+      $('footer, .footer, .site-footer').remove();
+      $('header, .header, .site-header').remove();
+      $('.advertisement, .ads, .ad-banner, .social-share').remove();
+      $('.breadcrumb, .breadcrumbs, .pagination').remove();
+      $('.menu, .dropdown-menu, .mobile-menu').remove();
+      $('.cookie-notice, .banner, .promo-banner').remove();
+      $('script, style, noscript').remove();
+      
+      // Try to find main content areas with priority for support/FAQ content
       const mainSelectors = [
+        // Support/FAQ specific selectors
+        '.faq, .faqs, .frequently-asked-questions',
+        '.support, .help, .help-center, .knowledge-base',
+        '.documentation, .docs, .doc-content',
+        '.article-content, .support-article',
+        '.question, .answer, .qa-content',
+        
+        // General content selectors
         'main',
         'article', 
         '[role="main"]',
@@ -92,28 +111,85 @@ export async function scrapeWebsite(
         '.post-content',
         '.entry-content',
         '#content',
-        '#main'
+        '#main',
+        '.page-content'
       ];
 
       let mainContent = '';
       for (const selector of mainSelectors) {
         const element = $(selector).first();
-        if (element.length && element.text().trim().length > 100) {
-          mainContent = element.text();
-          break;
+        if (element.length) {
+          // Remove any remaining unwanted elements within the main content
+          element.find('nav, .nav, aside, .sidebar, footer, .footer').remove();
+          element.find('.advertisement, .ads, .social-share, .related-links').remove();
+          element.find('.author-bio, .author-info, .meta-info, .post-meta').remove();
+          
+          const textContent = element.text().trim();
+          if (textContent.length > 100) {
+            mainContent = textContent;
+            break;
+          }
         }
       }
 
-      // Fallback to body if no main content found
-      content = mainContent || $('body').text();
+      // Enhanced fallback - look for specific content patterns if no main content found
+      if (!mainContent) {
+        // Look for question/answer patterns
+        const qaElements = $('h1, h2, h3, h4, h5, h6').filter(function() {
+          const text = $(this).text().toLowerCase();
+          return text.includes('?') || 
+                 text.includes('how to') || 
+                 text.includes('what is') || 
+                 text.includes('why') ||
+                 text.includes('when') ||
+                 text.includes('where');
+        });
+        
+        if (qaElements.length > 0) {
+          let qaContent = '';
+          qaElements.each(function() {
+            const heading = $(this);
+            const headingText = heading.text().trim();
+            let nextContent = '';
+            
+            // Get content after the heading
+            let next = heading.next();
+            while (next.length && !next.is('h1, h2, h3, h4, h5, h6')) {
+              if (next.is('p, div, span, li')) {
+                nextContent += next.text().trim() + ' ';
+              }
+              next = next.next();
+            }
+            
+            if (nextContent.trim().length > 20) {
+              qaContent += `${headingText}\n${nextContent.trim()}\n\n`;
+            }
+          });
+          
+          if (qaContent.trim().length > 200) {
+            mainContent = qaContent;
+          }
+        }
+      }
+
+      // Final fallback to body with aggressive filtering
+      if (!mainContent) {
+        $('nav, aside, footer, header, .nav, .sidebar, .footer, .header').remove();
+        $('script, style, noscript, iframe, video, audio').remove();
+        mainContent = $('body').text();
+      }
+      
+      content = mainContent;
     } else {
       content = $('body').text();
     }
 
-    // Clean up content
+    // Enhanced content cleanup for better readability
     content = content
-      .replace(/\s+/g, ' ')
-      .replace(/\n\s*\n/g, '\n')
+      .replace(/\s+/g, ' ')           // Normalize whitespace
+      .replace(/\n\s*\n/g, '\n')      // Remove excessive line breaks
+      .replace(/^\s+|\s+$/gm, '')     // Trim lines
+      .replace(/(.)\1{3,}/g, '$1$1')  // Remove repetitive characters
       .trim();
 
     // Limit content length

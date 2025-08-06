@@ -24,19 +24,44 @@ export interface ContentStructure {
 
 export async function organizeContent(rawContent: string, url: string): Promise<ContentStructure> {
   try {
-    const prompt = `You are an AI content organizer specializing in preparing web content for chatbot knowledge bases. 
+    const prompt = `You are an expert content organizer specializing in creating clean, structured knowledge base content for chatbot systems.
 
-Analyze and organize the following web content from ${url}:
-
+CONTENT TO ORGANIZE:
 ${rawContent}
 
-Please organize this content into a structured format optimized for AI chatbot knowledge bases. Follow these guidelines:
+SOURCE: ${url}
 
-1. Create a clear title and comprehensive summary
-2. Break content into logical sections with descriptive titles
-3. Categorize each section by priority: "primary" (core concepts), "secondary" (detailed explanations), or "supporting" (examples/references)
-4. Extract key topics for each section
-5. Ensure content is well-structured and easy for AI systems to understand
+REQUIREMENTS:
+Transform this content into a clean, well-structured format following these strict guidelines:
+
+FORMAT REQUIREMENTS:
+- Create clear, descriptive headings for each section (questions/topics)
+- Write concise, paragraph-style answers under each heading
+- NO bullet points or lists unless the source content specifically requires them for clarity
+- Each section should be focused and under 1000 tokens for optimal embedding retrieval
+- Organize logically from most important to least important
+
+CONTENT FILTERING:
+- Extract ONLY useful support content
+- Skip navigation, menu items, footers, advertisements
+- Focus on actionable information, answers, and helpful content
+- Remove redundant or promotional text
+
+STRUCTURE:
+- Use question-style headings when appropriate (e.g., "How do I reset my password?")
+- Use topic-style headings for informational content (e.g., "Payment Methods")
+- Ensure each section can stand alone as a complete answer
+- Keep content clear and conversational for chatbot responses
+
+OUTPUT FORMAT:
+Each section should follow this pattern:
+## [Clear Question or Topic Heading]
+[Concise, well-formatted paragraph response that directly answers or explains the topic]
+
+CHUNKING:
+- Split long sections into smaller, focused chunks
+- Each chunk should be complete and self-contained
+- Maximum ~800 words per section for optimal embedding performance
 
 Respond with JSON in this exact format:
 {
@@ -44,8 +69,8 @@ Respond with JSON in this exact format:
   "summary": "string", 
   "sections": [
     {
-      "title": "string",
-      "content": "string",
+      "title": "string (should be a clear question or topic)",
+      "content": "string (paragraph format, no bullets unless necessary)",
       "priority": "primary|secondary|supporting",
       "topics": ["string"]
     }
@@ -127,26 +152,48 @@ Respond with JSON in this exact format:
 export async function generateMarkdown(structuredContent: ContentStructure): Promise<string> {
   const { title, summary, sections, metadata } = structuredContent;
   
+  // Clean, minimal header optimized for chatbot knowledge bases
   let markdown = `# ${title}\n\n`;
-  markdown += `## Summary\n${summary}\n\n`;
   
-  markdown += `## Content Statistics\n`;
-  markdown += `- **Word Count:** ${metadata.wordCount}\n`;
-  markdown += `- **Sections:** ${metadata.sectionCount}\n`;
-  markdown += `- **Topics:** ${metadata.topicCount}\n`;
-  markdown += `- **Confidence:** ${Math.round(metadata.confidence * 100)}%\n`;
-  markdown += `- **Extracted:** ${new Date(metadata.extractedAt).toLocaleString()}\n\n`;
+  if (summary && summary !== "No summary available") {
+    markdown += `${summary}\n\n`;
+  }
 
+  // Generate clean sections without extra formatting
   sections.forEach((section, index) => {
+    // Use ## for main headings to create proper structure
     markdown += `## ${section.title}\n\n`;
     markdown += `${section.content}\n\n`;
     
-    if (section.topics && section.topics.length > 0) {
-      markdown += `**Key Topics:** ${section.topics.join(", ")}\n\n`;
+    // Only add separator between sections, not after the last one
+    if (index < sections.length - 1) {
+      markdown += `---\n\n`;
     }
-    
-    markdown += `---\n\n`;
   });
 
+  // Add metadata as a comment at the end for reference (hidden from main content)
+  markdown += `\n\n<!-- Content Statistics: ${metadata.wordCount} words, ${metadata.sectionCount} sections, extracted ${new Date(metadata.extractedAt).toLocaleDateString()} -->`;
+
   return markdown;
+}
+
+export async function generatePlainText(structuredContent: ContentStructure): Promise<string> {
+  const { title, summary, sections } = structuredContent;
+  
+  let text = `${title}\n\n`;
+  
+  if (summary && summary !== "No summary available") {
+    text += `${summary}\n\n`;
+  }
+
+  sections.forEach((section, index) => {
+    text += `${section.title}\n\n`;
+    text += `${section.content}\n\n`;
+    
+    if (index < sections.length - 1) {
+      text += `---\n\n`;
+    }
+  });
+
+  return text;
 }

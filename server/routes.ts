@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { scrapeWebsite, validateUrl } from "./services/scraper";
-import { organizeContent, generateMarkdown } from "./services/gemini";
+import { organizeContent, generateMarkdown, generatePlainText } from "./services/gemini";
 import { 
   insertScrapeJobSchema, 
   processingOptionsSchema,
@@ -96,19 +96,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (job.outputFormat === "markdown") {
         const markdown = await generateMarkdown(structuredContent);
         res.setHeader('Content-Type', 'text/markdown');
-        res.setHeader('Content-Disposition', `attachment; filename="content-${jobId}.md"`);
+        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${job.url.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.md"`);
         res.send(markdown);
       } else if (job.outputFormat === "json") {
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="content-${jobId}.json"`);
+        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${job.url.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.json"`);
         res.json(structuredContent);
       } else {
-        // Plain text fallback
-        const textContent = structuredContent.sections
-          .map((section: any) => `${section.title}\n\n${section.content}`)
-          .join('\n\n---\n\n');
+        // Clean plain text format
+        const textContent = await generatePlainText(structuredContent);
         res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename="content-${jobId}.txt"`);
+        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${job.url.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.txt"`);
         res.send(textContent);
       }
 

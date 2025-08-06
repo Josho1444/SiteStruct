@@ -78,10 +78,10 @@ export function UrlInputPanel({ onSubmit, isProcessing, recentJobs, onSelectRece
     <Card className="h-full flex flex-col" data-testid="url-input-panel">
       <CardHeader className="pb-6 border-b border-border-light">
         <CardTitle className="text-lg font-semibold text-text-primary mb-2">
-          Website Content Scraper
+          Smart Content Extractor
         </CardTitle>
         <p className="text-text-secondary text-sm">
-          Enter a URL to extract and organize content for your AI chatbot knowledge base
+          Extract only useful support content from websites and organize it into clean, structured formats perfect for chatbot knowledge bases. Automatically filters out navigation, sidebars, and irrelevant elements.
         </p>
       </CardHeader>
 
@@ -121,7 +121,7 @@ export function UrlInputPanel({ onSubmit, isProcessing, recentJobs, onSelectRece
               <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
             )}
             <p className="text-xs text-text-secondary">
-              We'll extract and organize content from this webpage
+              Content will be extracted cleanly - navigation, sidebars, and ads automatically removed
             </p>
           </div>
 
@@ -138,7 +138,7 @@ export function UrlInputPanel({ onSubmit, isProcessing, recentJobs, onSelectRece
                   data-testid="checkbox-extract-main"
                 />
                 <Label htmlFor="extractMainContent" className="text-sm text-text-primary">
-                  Extract main content
+                  Smart content extraction (removes menus, footers, ads)
                 </Label>
               </div>
               <div className="flex items-center space-x-3">
@@ -170,7 +170,7 @@ export function UrlInputPanel({ onSubmit, isProcessing, recentJobs, onSelectRece
                   data-testid="checkbox-ai-organization"
                 />
                 <Label htmlFor="aiOrganization" className="text-sm text-text-primary">
-                  AI content organization
+                  AI organization (creates clean Q&A format)
                 </Label>
               </div>
             </div>
