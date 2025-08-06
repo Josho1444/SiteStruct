@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 
 // Note that the newest Gemini model series is "gemini-2.5-flash" or "gemini-2.5-pro"
 // This API key is from Gemini Developer API Key, not vertex AI API Key
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || "" });
 
 export interface ContentStructure {
   title: string;
