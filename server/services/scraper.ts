@@ -37,6 +37,7 @@ export async function scrapeWebsite(
   try {
     browser = await puppeteer.launch({
       headless: true,
+      executablePath: '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -44,7 +45,8 @@ export async function scrapeWebsite(
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--disable-extensions'
       ]
     });
 

@@ -1,6 +1,13 @@
 # Overview
 
-This is a web scraping and content organization application built with Express.js backend and React frontend. The application allows users to input website URLs, scrape the content using Puppeteer, and organize the extracted content using OpenAI's API for chatbot knowledge bases. It features a modern UI built with shadcn/ui components and supports real-time job status tracking.
+This is a web scraping and content organization application built with Express.js backend and React frontend. The application allows users to input website URLs, scrape the content using Puppeteer, and organize the extracted content using Google Gemini AI for chatbot knowledge bases. It features a modern UI built with shadcn/ui components and supports real-time job status tracking.
+
+## Recent Changes (Aug 6, 2025)
+
+✓ Migrated from OpenAI to Google Gemini AI integration
+✓ Fixed Puppeteer Chrome installation issue by configuring system Chromium
+✓ Updated color scheme to match user specifications (indigo primary, emerald secondary)
+✓ Successfully tested web scraping functionality
 
 # User Preferences
 
@@ -58,8 +65,8 @@ The storage layer is abstracted through interfaces, making it easy to switch to 
 - Migration system ready for database deployment
 
 **AI & Content Processing**:
-- OpenAI API for content organization and structuring
-- Puppeteer for web scraping with headless Chrome
+- Google Gemini AI for content organization and structuring
+- Puppeteer for web scraping with headless Chromium (system-installed)
 - Cheerio for HTML parsing and content extraction
 
 **UI & Styling**:
