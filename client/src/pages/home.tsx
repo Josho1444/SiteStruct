@@ -155,7 +155,7 @@ export default function Home() {
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-xl font-semibold text-text-primary" data-testid="app-title">
-                AI Content Processor
+                Smart Content Extractor
               </h1>
             </div>
             <nav className="hidden md:flex items-center space-x-8">
