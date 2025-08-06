@@ -24,44 +24,44 @@ export interface ContentStructure {
 
 export async function organizeContent(rawContent: string, url: string): Promise<ContentStructure> {
   try {
-    const prompt = `You are an expert content organizer specializing in creating clean, structured knowledge base content for chatbot systems.
+    // First detect if this is FAQ/Q&A content or general informational content
+    const detectionPrompt = `Analyze this content and determine its primary type:
+
+${rawContent.substring(0, 2000)}...
+
+Respond with only "FAQ" if this content is primarily FAQ/Q&A format with questions and answers, or "GENERAL" if it's general informational content like articles, about pages, or documentation.`;
+
+    let isQandA = false;
+    try {
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const detectionResponse = await model.generateContent(detectionPrompt);
+      const detectionText = detectionResponse.response.text().trim();
+      isQandA = detectionText.includes("FAQ");
+    } catch (error) {
+      console.log('Content type detection failed, defaulting to general format');
+    }
+
+    // Create appropriate prompt based on content type
+    const prompt = isQandA ? `You are organizing FAQ/Q&A content for a chatbot knowledge base.
 
 CONTENT TO ORGANIZE:
 ${rawContent}
 
 SOURCE: ${url}
 
-REQUIREMENTS:
-Transform this content into a clean, well-structured format following these strict guidelines:
+INSTRUCTIONS FOR FAQ CONTENT:
+- Extract ALL questions and their complete answers
+- Use "Question: [exact question]" format for section titles
+- Preserve all important details from answers
+- Group related Q&A pairs logically
+- Ensure comprehensive coverage - don't lose any information
+- Maximum 30,000 words total content
 
-FORMAT REQUIREMENTS:
-- Create clear, descriptive headings for each section (questions/topics)
-- Write concise, paragraph-style answers under each heading
-- NO bullet points or lists unless the source content specifically requires them for clarity
-- Each section should be focused and under 1000 tokens for optimal embedding retrieval
-- Organize logically from most important to least important
-
-CONTENT FILTERING:
-- Extract ONLY useful support content
-- Skip navigation, menu items, footers, advertisements
-- Focus on actionable information, answers, and helpful content
-- Remove redundant or promotional text
-
-STRUCTURE:
-- Use question-style headings when appropriate (e.g., "How do I reset my password?")
-- Use topic-style headings for informational content (e.g., "Payment Methods")
-- Ensure each section can stand alone as a complete answer
-- Keep content clear and conversational for chatbot responses
-
-OUTPUT FORMAT:
-Each section should follow this pattern:
-## [Clear Question or Topic Heading]
-[Concise, well-formatted paragraph response that directly answers or explains the topic]
-
-CHUNKING:
-- Split long sections into smaller, focused chunks
-- Each chunk should be complete and self-contained
-- Maximum ~800 words per section for optimal embedding performance
+FORMATTING:
+- Each section should be a complete Q&A pair
+- Keep answers detailed and informative
+- Use paragraph format for answers
+- Maintain all factual information from source
 
 Respond with JSON in this exact format:
 {
@@ -69,9 +69,49 @@ Respond with JSON in this exact format:
   "summary": "string", 
   "sections": [
     {
-      "title": "string (should be a clear question or topic)",
-      "content": "string (paragraph format, no bullets unless necessary)",
+      "title": "Question: [clear question text]",
+      "content": "Complete detailed answer with all important information",
       "priority": "primary|secondary|supporting",
+      "topics": ["string"]
+    }
+  ],
+  "metadata": {
+    "wordCount": number,
+    "sectionCount": number,
+    "topicCount": number,
+    "confidence": number (0-1),
+    "extractedAt": "ISO string"
+  }
+}` : `You are organizing general informational content for a chatbot knowledge base.
+
+CONTENT TO ORGANIZE:
+${rawContent}
+
+SOURCE: ${url}
+
+INSTRUCTIONS FOR GENERAL CONTENT:
+- Break into logical, comprehensive sections with clear topic headings
+- Use descriptive section titles (NOT questions) like "Company History", "Services Offered", etc.
+- Preserve ALL important information - comprehensive coverage is critical
+- Create detailed sections that maintain full context
+- Extract maximum information up to 30,000 words
+- Focus on informational value for knowledge base
+
+FORMATTING:
+- Each section should cover a complete topic thoroughly  
+- Use natural paragraph format
+- Maintain factual accuracy and completeness
+- Organize from most to least important information
+
+Respond with JSON in this exact format:
+{
+  "title": "string",
+  "summary": "string", 
+  "sections": [
+    {
+      "title": "Clear topic heading (not a question)",
+      "content": "Comprehensive information covering this topic completely",
+      "priority": "primary|secondary|supporting", 
       "topics": ["string"]
     }
   ],
@@ -84,9 +124,9 @@ Respond with JSON in this exact format:
   }
 }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
-      config: {
+    const model = ai.getGenerativeModel({
+      model: "gemini-1.5-pro",
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
           type: "object",
@@ -124,11 +164,11 @@ Respond with JSON in this exact format:
           required: ["title", "summary", "sections", "metadata"]
         },
         temperature: 0.3,
-      },
-      contents: prompt,
+      }
     });
 
-    const result = JSON.parse(response.text || "{}");
+    const response = await model.generateContent(prompt);
+    const result = JSON.parse(response.response.text() || "{}");
     
     // Validate and ensure proper structure
     return {

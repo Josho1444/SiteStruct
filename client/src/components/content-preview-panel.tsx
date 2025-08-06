@@ -64,10 +64,18 @@ export function ContentPreviewPanel({ job, isProcessing, onDownload }: ContentPr
           bgColor: "bg-destructive/10",
         };
       case "processing":
+        const processingOptions = job.processingOptions as any;
+        const startTime = processingOptions?.startTime || Date.now();
+        const estimatedTime = processingOptions?.estimatedTime || 60000;
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, estimatedTime - elapsed);
+        const remainingMinutes = Math.ceil(remaining / 60000);
+        const remainingSeconds = Math.ceil((remaining % 60000) / 1000);
+        
         return {
           icon: <AlertCircle className="w-6 h-6 text-warning animate-pulse" />,
           title: "Processing Content",
-          description: "Extracting and organizing website content...",
+          description: `Extracting and organizing website content... ${remainingMinutes > 0 ? `~${remainingMinutes}m` : `~${remainingSeconds}s`} remaining`,
           bgColor: "bg-warning/10",
         };
       default:

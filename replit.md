@@ -13,6 +13,17 @@ This is a web scraping and content organization application built with Express.j
 ✓ Added intelligent content chunking for optimal embedding-based retrieval
 ✓ Updated output formats to generate clean, structured knowledge base files
 
+### Latest Interface Improvements (Aug 6, 2025 - Evening)
+
+✓ Completely simplified user interface - removed complex options
+✓ Streamlined to URL input, format selection (.txt/.md), and single download button
+✓ Added intelligent content type detection (FAQ vs general information)
+✓ Q&A format now only used for actual FAQ/Q&A pages, structured format for general content
+✓ Increased maximum content extraction to 30,000 words for comprehensive coverage
+✓ Extended processing timeout to 5 minutes maximum
+✓ Added real-time processing time estimates and countdown display
+✓ Enhanced content organization to preserve ALL informational data
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.

@@ -35,6 +35,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         outputFormat: outputFormat || "markdown",
       });
 
+      // Add time estimation based on URL complexity
+      const estimatedTime = Math.min(Math.max(30000, url.length * 500), 300000); // 30s to 5min
+      const startTime = Date.now();
+      
+      // Update job with time estimates
+      await storage.updateScrapeJob(job.id, {
+        ...job,
+        processingOptions: {
+          ...options,
+          estimatedTime,
+          startTime,
+        }
+      });
+
       // Start processing in background
       processWebsite(job.id, url, options, outputFormat || "markdown");
 

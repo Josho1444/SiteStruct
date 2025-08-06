@@ -30,8 +30,10 @@ export const processingOptionsSchema = z.object({
   processImages: z.boolean().default(false),
   aiOrganization: z.boolean().default(true),
   rawFormatted: z.boolean().default(false),
-  maxContentLength: z.number().default(10000),
-  timeout: z.number().default(60000),
+  maxContentLength: z.number().default(30000),
+  timeout: z.number().default(300000),
+  estimatedTime: z.number().optional(),
+  startTime: z.number().optional(),
 });
 
 export const structuredContentSchema = z.object({

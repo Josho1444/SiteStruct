@@ -43,8 +43,8 @@ export function UrlInputPanel({ onSubmit, isProcessing, recentJobs, onSelectRece
         processImages: false,
         aiOrganization: true,
         rawFormatted: false,
-        maxContentLength: 10000,
-        timeout: 60000,
+        maxContentLength: 30000,
+        timeout: 300000,
       },
     };
     onSubmit(submissionData);
