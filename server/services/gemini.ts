@@ -33,9 +33,11 @@ Respond with only "FAQ" if this content is primarily FAQ/Q&A format with questio
 
     let isQandA = false;
     try {
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const detectionResponse = await model.generateContent(detectionPrompt);
-      const detectionText = detectionResponse.response.text().trim();
+      const detectionResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ parts: [{ text: detectionPrompt }] }]
+      });
+      const detectionText = detectionResponse.candidates[0].content.parts[0].text.trim();
       isQandA = detectionText.includes("FAQ");
     } catch (error) {
       console.log('Content type detection failed, defaulting to general format');
@@ -124,9 +126,9 @@ Respond with JSON in this exact format:
   }
 }`;
 
-    const model = ai.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      generationConfig: {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-pro",
+      config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: "object",
@@ -164,76 +166,60 @@ Respond with JSON in this exact format:
           required: ["title", "summary", "sections", "metadata"]
         },
         temperature: 0.3,
-      }
+      },
+      contents: [{ parts: [{ text: prompt }] }],
     });
 
-    const response = await model.generateContent(prompt);
-    const result = JSON.parse(response.response.text() || "{}");
+    const result = JSON.parse(response.candidates[0].content.parts[0].text || "{}");
     
     // Validate and ensure proper structure
     return {
       title: result.title || "Untitled Content",
-      summary: result.summary || "No summary available",
-      sections: Array.isArray(result.sections) ? result.sections : [],
+      summary: result.summary || "Content summary not available",
+      sections: result.sections || [],
       metadata: {
-        wordCount: result.metadata?.wordCount || rawContent.split(/\s+/).length,
-        sectionCount: result.sections?.length || 0,
-        topicCount: result.sections?.reduce((acc: number, section: any) => acc + (section.topics?.length || 0), 0) || 0,
-        confidence: result.metadata?.confidence || 0.8,
+        wordCount: result.metadata?.wordCount || 0,
+        sectionCount: result.metadata?.sectionCount || 0,
+        topicCount: result.metadata?.topicCount || 0,
+        confidence: result.metadata?.confidence || 0.5,
         extractedAt: new Date().toISOString(),
-      },
+      }
     };
+
   } catch (error) {
-    console.error("Gemini content organization error:", error);
-    throw new Error("Failed to organize content with AI: " + (error as Error).message);
+    console.error('Gemini content organization error:', error);
+    throw new Error(`Failed to organize content with AI: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
-export async function generateMarkdown(structuredContent: ContentStructure): Promise<string> {
-  const { title, summary, sections, metadata } = structuredContent;
+export function generateMarkdown(structuredContent: ContentStructure): string {
+  let content = `# ${structuredContent.title}\n\n`;
+  content += `${structuredContent.summary}\n\n`;
   
-  // Clean, minimal header optimized for chatbot knowledge bases
-  let markdown = `# ${title}\n\n`;
-  
-  if (summary && summary !== "No summary available") {
-    markdown += `${summary}\n\n`;
-  }
-
-  // Generate clean sections without extra formatting
-  sections.forEach((section, index) => {
-    // Use ## for main headings to create proper structure
-    markdown += `## ${section.title}\n\n`;
-    markdown += `${section.content}\n\n`;
-    
-    // Only add separator between sections, not after the last one
-    if (index < sections.length - 1) {
-      markdown += `---\n\n`;
+  structuredContent.sections.forEach((section, index) => {
+    content += `## ${section.title}\n\n`;
+    content += `${section.content}\n\n`;
+    if (index < structuredContent.sections.length - 1) {
+      content += "---\n\n";
     }
   });
-
-  // Add metadata as a comment at the end for reference (hidden from main content)
-  markdown += `\n\n<!-- Content Statistics: ${metadata.wordCount} words, ${metadata.sectionCount} sections, extracted ${new Date(metadata.extractedAt).toLocaleDateString()} -->`;
-
-  return markdown;
+  
+  return content;
 }
 
-export async function generatePlainText(structuredContent: ContentStructure): Promise<string> {
-  const { title, summary, sections } = structuredContent;
+export function generatePlainText(structuredContent: ContentStructure): string {
+  let content = `${structuredContent.title}\n`;
+  content += "=".repeat(structuredContent.title.length) + "\n\n";
+  content += `${structuredContent.summary}\n\n`;
   
-  let text = `${title}\n\n`;
-  
-  if (summary && summary !== "No summary available") {
-    text += `${summary}\n\n`;
-  }
-
-  sections.forEach((section, index) => {
-    text += `${section.title}\n\n`;
-    text += `${section.content}\n\n`;
-    
-    if (index < sections.length - 1) {
-      text += `---\n\n`;
+  structuredContent.sections.forEach((section, index) => {
+    content += `${section.title}\n`;
+    content += "-".repeat(section.title.length) + "\n\n";
+    content += `${section.content}\n\n`;
+    if (index < structuredContent.sections.length - 1) {
+      content += "\n";
     }
   });
-
-  return text;
+  
+  return content;
 }
