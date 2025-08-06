@@ -64,30 +64,54 @@ export default function Home() {
   });
 
   // Download content
-  const downloadContent = async (jobId: string, format: string) => {
+  const downloadContent = async (jobId: string, format: string, type?: string, rawFormat?: string) => {
     try {
-      const response = await fetch(`/api/scrape/${jobId}/download`);
+      let url = `/api/scrape/${jobId}/download`;
+      const params = new URLSearchParams();
+      
+      if (rawFormat === 'raw') {
+        params.set('format', 'raw');
+        params.set('type', type || 'md');
+      } else if (type) {
+        params.set('type', type);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error("Failed to download content");
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = downloadUrl;
       
-      const extension = format === "markdown" ? "md" : format === "json" ? "json" : "txt";
-      a.download = `content-${jobId}.${extension}`;
+      // Get filename from response headers or create default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `content-${jobId}.${format === 'json' ? 'json' : format === 'markdown' ? 'md' : 'txt'}`;
       
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
       
+      const downloadType = rawFormat === 'raw' ? `Raw ${type?.toUpperCase()}` : format.toUpperCase();
       toast({
         title: "Download complete",
-        description: `Content downloaded as ${extension.toUpperCase()} file.`,
+        description: `Content downloaded as ${downloadType} file.`,
       });
     } catch (error) {
       toast({

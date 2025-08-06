@@ -81,32 +81,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/scrape/:jobId/download", async (req, res) => {
     try {
       const { jobId } = req.params;
+      const { format, type } = req.query; // format: 'structured' | 'raw', type: 'md' | 'txt' | 'json'
       const job = await storage.getScrapeJob(jobId);
 
       if (!job) {
         return res.status(404).json({ message: "Scrape job not found" });
       }
 
-      if (job.status !== "completed" || !job.structuredContent) {
+      if (job.status !== "completed") {
         return res.status(400).json({ message: "Content not ready for download" });
       }
 
       const structuredContent = job.structuredContent as any;
+      const metadata = job.metadata as any;
+      const urlSlug = job.url.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      const timestamp = Date.now();
       
-      if (job.outputFormat === "markdown") {
+      // Handle raw formatted content download
+      if (format === 'raw' && metadata?.rawFormatted) {
+        if (type === 'md') {
+          res.setHeader('Content-Type', 'text/markdown');
+          res.setHeader('Content-Disposition', `attachment; filename="raw-formatted-${urlSlug}-${timestamp}.md"`);
+          res.send(metadata.rawFormatted);
+        } else {
+          res.setHeader('Content-Type', 'text/plain');
+          res.setHeader('Content-Disposition', `attachment; filename="raw-formatted-${urlSlug}-${timestamp}.txt"`);
+          res.send(metadata.rawFormatted);
+        }
+        return;
+      }
+
+      // Handle structured content download (original behavior)
+      if (!structuredContent) {
+        return res.status(400).json({ message: "Structured content not available" });
+      }
+      
+      if (job.outputFormat === "markdown" || type === 'md') {
         const markdown = await generateMarkdown(structuredContent);
         res.setHeader('Content-Type', 'text/markdown');
-        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${job.url.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.md"`);
+        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${urlSlug}-${timestamp}.md"`);
         res.send(markdown);
-      } else if (job.outputFormat === "json") {
+      } else if (job.outputFormat === "json" || type === 'json') {
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${job.url.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.json"`);
+        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${urlSlug}-${timestamp}.json"`);
         res.json(structuredContent);
       } else {
         // Clean plain text format
         const textContent = await generatePlainText(structuredContent);
         res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${job.url.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.txt"`);
+        res.setHeader('Content-Disposition', `attachment; filename="chatbot-knowledge-${urlSlug}-${timestamp}.txt"`);
         res.send(textContent);
       }
 
@@ -153,6 +176,7 @@ async function processWebsite(
       extractMainContent: options.extractMainContent,
       includeMetadata: options.includeMetadata,
       processImages: options.processImages,
+      rawFormatted: options.rawFormatted,
       maxContentLength: options.maxContentLength,
       timeout: options.timeout,
     });
@@ -192,6 +216,7 @@ async function processWebsite(
       metadata: {
         ...scrapedContent.metadata,
         processingOptions: options,
+        rawFormatted: scrapedContent.rawFormatted,
       },
       wordCount: structuredContent.metadata.wordCount,
       processingTime,

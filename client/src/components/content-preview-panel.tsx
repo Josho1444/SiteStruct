@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 interface ContentPreviewPanelProps {
   job: ScrapeJob | null;
   isProcessing: boolean;
-  onDownload: (jobId: string, format: string) => void;
+  onDownload: (jobId: string, format: string, type?: string, rawFormat?: string) => void;
 }
 
 export function ContentPreviewPanel({ job, isProcessing, onDownload }: ContentPreviewPanelProps) {
@@ -200,13 +200,18 @@ export function ContentPreviewPanel({ job, isProcessing, onDownload }: ContentPr
             {/* Content Tabs */}
             <div className="px-6 pt-4 border-b border-border-light">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-3 w-full">
+                <TabsList className={`grid ${job.metadata?.rawFormatted ? 'grid-cols-4' : 'grid-cols-3'} w-full`}>
                   <TabsTrigger value="structured" data-testid="tab-structured">
                     Structured Content
                   </TabsTrigger>
                   <TabsTrigger value="raw" data-testid="tab-raw">
                     Raw Content
                   </TabsTrigger>
+                  {job.metadata?.rawFormatted && (
+                    <TabsTrigger value="rawFormatted" data-testid="tab-raw-formatted">
+                      Raw Formatted
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="metadata" data-testid="tab-metadata">
                     Metadata
                   </TabsTrigger>
@@ -375,6 +380,56 @@ export function ContentPreviewPanel({ job, isProcessing, onDownload }: ContentPr
                     </pre>
                   </div>
                 </TabsContent>
+
+                {job.metadata?.rawFormatted && (
+                  <TabsContent value="rawFormatted" className="p-6 m-0 h-full">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-sm font-semibold text-text-primary">Raw Formatted Q&A</h3>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDownload(job.id, 'raw', 'md', 'raw')}
+                            className="flex items-center gap-2 text-xs"
+                            data-testid="button-download-raw-formatted-md"
+                          >
+                            <Download className="h-3 w-3" />
+                            .MD
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDownload(job.id, 'raw', 'txt', 'raw')}
+                            className="flex items-center gap-2 text-xs"
+                            data-testid="button-download-raw-formatted-txt"
+                          >
+                            <Download className="h-3 w-3" />
+                            .TXT
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(job.metadata?.rawFormatted || '')}
+                            className="flex items-center gap-2 text-xs"
+                            data-testid="button-copy-raw-formatted"
+                          >
+                            <Copy className="h-3 w-3" />
+                            Copy
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-4 text-sm leading-relaxed overflow-auto max-h-96" data-testid="raw-formatted-content">
+                        <div className="whitespace-pre-wrap font-mono">
+                          {job.metadata.rawFormatted}
+                        </div>
+                      </div>
+                      <div className="text-xs text-text-secondary bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
+                        <p><strong>Raw Formatted:</strong> Clean Q&A format extracted directly from webpage structure without AI processing. Perfect for simple knowledge bases.</p>
+                      </div>
+                    </div>
+                  </TabsContent>
+                )}
 
                 <TabsContent value="metadata" className="p-6 m-0 h-full">
                   <div className="space-y-4">

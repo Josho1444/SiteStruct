@@ -3,6 +3,7 @@ export interface ProcessingOptions {
   includeMetadata: boolean;
   processImages: boolean;
   aiOrganization: boolean;
+  rawFormatted: boolean;
   maxContentLength: number;
   timeout: number;
 }

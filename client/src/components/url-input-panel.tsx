@@ -20,6 +20,7 @@ const formSchema = z.object({
     includeMetadata: z.boolean(), 
     processImages: z.boolean(),
     aiOrganization: z.boolean(),
+    rawFormatted: z.boolean(),
     maxContentLength: z.number().min(1000).max(50000),
     timeout: z.number().min(30000).max(300000),
   }),
@@ -48,6 +49,7 @@ export function UrlInputPanel({ onSubmit, isProcessing, recentJobs, onSelectRece
         includeMetadata: true,
         processImages: false,
         aiOrganization: true,
+        rawFormatted: false,
         maxContentLength: 10000,
         timeout: 60000,
       },
@@ -171,6 +173,16 @@ export function UrlInputPanel({ onSubmit, isProcessing, recentJobs, onSelectRece
                 />
                 <Label htmlFor="aiOrganization" className="text-sm text-text-primary">
                   AI organization (creates clean Q&A format)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="rawFormatted"
+                  {...form.register("processingOptions.rawFormatted")}
+                  data-testid="checkbox-raw-formatted"
+                />
+                <Label htmlFor="rawFormatted" className="text-sm text-text-primary">
+                  Generate raw formatted version (simple Q&A without AI)
                 </Label>
               </div>
             </div>

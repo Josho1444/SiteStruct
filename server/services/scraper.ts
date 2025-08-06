@@ -6,6 +6,7 @@ export interface ScrapedContent {
   title: string;
   description: string;
   content: string;
+  rawFormatted?: string;
   metadata: {
     scrapedAt: string;
     wordCount: number;
@@ -20,6 +21,7 @@ export async function scrapeWebsite(
     extractMainContent?: boolean;
     includeMetadata?: boolean;
     processImages?: boolean;
+    rawFormatted?: boolean;
     maxContentLength?: number;
     timeout?: number;
   } = {}
@@ -28,6 +30,7 @@ export async function scrapeWebsite(
     extractMainContent = true,
     includeMetadata = true,
     processImages = false,
+    rawFormatted = false,
     maxContentLength = 10000,
     timeout = 60000
   } = options;
@@ -197,6 +200,12 @@ export async function scrapeWebsite(
       content = content.substring(0, maxContentLength) + '...';
     }
 
+    // Create raw formatted content if requested
+    let rawFormattedContent = '';
+    if (rawFormatted) {
+      rawFormattedContent = createRawFormattedContent($, content);
+    }
+
     // Extract metadata
     const metadata = {
       scrapedAt: new Date().toISOString(),
@@ -205,13 +214,19 @@ export async function scrapeWebsite(
       links: $('a[href]').length,
     };
 
-    return {
+    const result: ScrapedContent = {
       url,
       title,
       description,
       content,
       metadata,
     };
+
+    if (rawFormatted) {
+      result.rawFormatted = rawFormattedContent;
+    }
+
+    return result;
 
   } catch (error) {
     console.error('Scraping error:', error);
@@ -221,6 +236,86 @@ export async function scrapeWebsite(
       await browser.close();
     }
   }
+}
+
+function createRawFormattedContent($: cheerio.CheerioAPI, content: string): string {
+  let formatted = '';
+  
+  // Look for heading-content pairs that look like Q&A
+  const headings = $('h1, h2, h3, h4, h5, h6').filter(function() {
+    const text = $(this).text().trim();
+    return text.length > 5 && text.length < 200; // Reasonable heading length
+  });
+
+  headings.each(function() {
+    const heading = $(this);
+    const headingText = heading.text().trim();
+    
+    // Get content after this heading until the next heading
+    let nextContent = '';
+    let next = heading.next();
+    let contentLength = 0;
+    
+    while (next.length && !next.is('h1, h2, h3, h4, h5, h6') && contentLength < 1000) {
+      if (next.is('p, div, span, li, ul, ol')) {
+        const text = next.text().trim();
+        if (text.length > 10) {
+          nextContent += text + ' ';
+          contentLength += text.length;
+        }
+      }
+      next = next.next();
+    }
+    
+    // Clean up the content
+    nextContent = nextContent.trim()
+      .replace(/\s+/g, ' ')
+      .replace(/(.)\1{3,}/g, '$1$1');
+    
+    // Only add if we have substantial content
+    if (nextContent.length > 20) {
+      // Format as clean Q&A
+      if (headingText.includes('?') || headingText.toLowerCase().includes('how') || 
+          headingText.toLowerCase().includes('what') || headingText.toLowerCase().includes('why') ||
+          headingText.toLowerCase().includes('when') || headingText.toLowerCase().includes('where')) {
+        formatted += `## ${headingText}\n${nextContent}\n\n`;
+      } else {
+        // Topic-style heading
+        formatted += `## ${headingText}\n${nextContent}\n\n`;
+      }
+    }
+  });
+  
+  // If no good headings found, try to create sections from content
+  if (formatted.length < 100) {
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    let currentSection = '';
+    
+    for (let i = 0; i < sentences.length && formatted.length < 2000; i++) {
+      const sentence = sentences[i].trim();
+      
+      // Look for question-like sentences or topic starters
+      if (sentence.includes('?') || sentence.toLowerCase().startsWith('how to') || 
+          sentence.toLowerCase().startsWith('what is') || sentence.toLowerCase().startsWith('you can')) {
+        
+        // If we have accumulated content, add it as a section
+        if (currentSection.length > 50) {
+          formatted += `## Topic\n${currentSection.trim()}\n\n`;
+        }
+        
+        currentSection = sentence + '. ';
+      } else if (currentSection.length > 0 && currentSection.length < 500) {
+        currentSection += sentence + '. ';
+      }
+    }
+    
+    // Add final section if exists
+    if (currentSection.length > 50) {
+      formatted += `## Additional Information\n${currentSection.trim()}\n\n`;
+    }
+  }
+  
+  return formatted || content; // Fallback to original content if formatting fails
 }
 
 export function validateUrl(url: string): boolean {
